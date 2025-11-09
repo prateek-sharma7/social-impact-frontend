@@ -9,6 +9,7 @@ import { Button, Input, Alert } from "@/components/common";
 import { ROUTES } from "@/utils/constants";
 import { emailSchema } from "@/utils/validators";
 import toast from "react-hot-toast";
+import { authAPI } from "@/api/endpoints/auth.api";
 
 const forgotPasswordSchema = z.object({
   email: emailSchema,
@@ -31,8 +32,7 @@ export const ForgotPasswordPage: React.FC = () => {
   const onSubmit = async (data: ForgotPasswordData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual forgot password API call
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      await authAPI.forgotPassword(data.email);
       setIsSubmitted(true);
       toast.success("Password reset link sent!");
     } catch (error) {

@@ -9,6 +9,7 @@ import { Button, Input, Alert } from "@/components/common";
 import { ROUTES } from "@/utils/constants";
 import { passwordSchema } from "@/utils/validators";
 import toast from "react-hot-toast";
+import { authAPI } from "@/api/endpoints/auth.api";
 
 const resetPasswordSchema = z
   .object({
@@ -57,11 +58,10 @@ export const ResetPasswordPage: React.FC = () => {
   const onSubmit = async (data: ResetPasswordData) => {
     setIsLoading(true);
     try {
-      // TODO: Implement actual reset password API call
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
+      await authAPI.resetPassword(token, data.password);
       setIsSuccess(true);
       toast.success("Password reset successfully!");
-      setTimeout(() => navigate(ROUTES.LOGIN), 2000);
+      navigate(ROUTES.LOGIN);
     } catch (error) {
       toast.error("Failed to reset password");
     } finally {

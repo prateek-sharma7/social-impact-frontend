@@ -16,6 +16,13 @@ import { ResetPasswordPage } from "@/pages/auth/ResetPasswordPage";
 
 // Public Pages
 import { HomePage } from "@/pages/HomePage";
+import { SettingsPage } from "./pages/profile/SettingsPage";
+import { PublicProfilePage } from "./pages/profile/PublicProfilePage";
+import { VolunteerDashboard } from "./pages/dashboard/VolunteerDashboard";
+import { OrganizationDashboard } from "./pages/dashboard/OrganizationDashboard";
+import { ProfilePage } from "./pages/profile/ProfilePage";
+
+// The route should already be set up from Step 4
 
 // Placeholder components (we'll build these in next steps)
 const ProjectsPage = () => (
@@ -23,11 +30,6 @@ const ProjectsPage = () => (
 );
 const NotificationsPage = () => <div>Notifications - Coming Soon</div>;
 const MessagesPage = () => <div>Messages - Coming Soon</div>;
-const ProfilePage = () => <div>Profile - Coming Soon</div>;
-const VolunteerDashboard = () => <div>Volunteer Dashboard - Coming Soon</div>;
-const OrganizationDashboard = () => (
-  <div>Organization Dashboard - Coming Soon</div>
-);
 const MyApplicationsPage = () => <div>My Applications - Coming Soon</div>;
 const MyProjectsPage = () => <div>My Projects - Coming Soon</div>;
 const CreateProjectPage = () => <div>Create Project - Coming Soon</div>;
@@ -51,6 +53,8 @@ export function AppRoutes() {
         <Route path={ROUTES.PROJECTS} element={<ProjectsPage />} />
         <Route path={ROUTES.SEARCH} element={<SearchPage />} />
         <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
+        {/* Public Profile View */}
+        <Route path={ROUTES.USER_PROFILE} element={<PublicProfilePage />} />
       </Route>
 
       {/* Auth Routes (no layout) */}
@@ -77,6 +81,22 @@ export function AppRoutes() {
           element={
             <ProtectedRoute>
               <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path={ROUTES.EDIT_PROFILE}
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />
