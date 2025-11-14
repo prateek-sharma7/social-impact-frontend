@@ -53,6 +53,7 @@ export interface ProjectResponse {
   maxProposals?: number;
   selectedProposalId?: number;
   proposalCount?: number;
+  requirements?: string;
 }
 
 /**
@@ -69,6 +70,10 @@ export interface CreateProjectRequest {
   volunteersNeeded: number;
   projectType: ProjectType;
   imageUrl?: string;
+  budget?: number;
+  proposalDeadline?: string;
+  maxProposals?: number;
+  requirements?: string;
 }
 
 /**

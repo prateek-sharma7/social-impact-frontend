@@ -34,8 +34,8 @@ export type UserRole = (typeof USER_ROLES)[keyof typeof USER_ROLES];
 
 // Project Types
 export const PROJECT_TYPES = {
-  VOLUNTEER: "VOLUNTEER",
-  DONATION: "DONATION",
+  VOLUNTEER: "VOLUNTEER_BASED",
+  DONATION: "DONATION_BASED",
 } as const;
 
 export type ProjectType = (typeof PROJECT_TYPES)[keyof typeof PROJECT_TYPES];
@@ -313,7 +313,7 @@ export const SORT_OPTIONS = [
   { value: "title,desc", label: "Title Z-A" },
   { value: "volunteersNeeded,desc", label: "Most Volunteers Needed" },
   { value: "startDate,asc", label: "Starting Soon" },
-] as const;
+];
 
 // Date formats
 export const DATE_FORMATS = {

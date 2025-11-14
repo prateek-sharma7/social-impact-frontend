@@ -29,6 +29,7 @@ export const RegisterForm: React.FC = () => {
     register,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -72,8 +73,9 @@ export const RegisterForm: React.FC = () => {
             }`}
             onClick={() => {
               setSelectedRole(USER_ROLES.VOLUNTEER);
-              register("role").onChange({
-                target: { value: USER_ROLES.VOLUNTEER },
+              setValue("role", USER_ROLES.VOLUNTEER, {
+                shouldValidate: true,
+                shouldDirty: true,
               });
             }}
             clickable
@@ -96,8 +98,9 @@ export const RegisterForm: React.FC = () => {
             }`}
             onClick={() => {
               setSelectedRole(USER_ROLES.ORGANIZATION);
-              register("role").onChange({
-                target: { value: USER_ROLES.ORGANIZATION },
+              setValue("role", USER_ROLES.ORGANIZATION, {
+                shouldValidate: true,
+                shouldDirty: true,
               });
             }}
             clickable

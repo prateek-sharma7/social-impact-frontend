@@ -21,6 +21,8 @@ import { PublicProfilePage } from "./pages/profile/PublicProfilePage";
 import { VolunteerDashboard } from "./pages/dashboard/VolunteerDashboard";
 import { OrganizationDashboard } from "./pages/dashboard/OrganizationDashboard";
 import { ProfilePage } from "./pages/profile/ProfilePage";
+import { MyProjectsPage } from "./pages/projects/MyProjectsPage";
+import { CreateProjectPage } from "./pages/projects/CreateProjectPage";
 
 // The route should already be set up from Step 4
 
@@ -31,8 +33,6 @@ const ProjectsPage = () => (
 const NotificationsPage = () => <div>Notifications - Coming Soon</div>;
 const MessagesPage = () => <div>Messages - Coming Soon</div>;
 const MyApplicationsPage = () => <div>My Applications - Coming Soon</div>;
-const MyProjectsPage = () => <div>My Projects - Coming Soon</div>;
-const CreateProjectPage = () => <div>Create Project - Coming Soon</div>;
 const AnalyticsPage = () => <div>Analytics - Coming Soon</div>;
 const SearchPage = () => <div>Search - Coming Soon</div>;
 const NotFoundPage = () => (
