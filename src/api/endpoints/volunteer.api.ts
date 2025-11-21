@@ -29,9 +29,15 @@ export const volunteerAPI = {
     data: VolunteerRegistrationRequest,
     id: number
   ): Promise<VolunteerRegistrationResponse> => {
+    const user = localStorage.getItem("userId");
     const response = await apiClient.post(
       API_ENDPOINTS.VOLUNTEERS.REGISTER(id),
-      data
+      data,
+      {
+        headers: {
+          "X-User-Id": user || "",
+        },
+      }
     );
     return response.data;
   },

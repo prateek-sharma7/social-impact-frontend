@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useProject, useDeleteProject } from "@/hooks/useProjects";
+import { useRegisterForProject } from "@/hooks/useVolunteers";
 import { useAuthStore } from "@/store/authStore";
 import { PageHeader } from "@/components/layout";
 import {
@@ -10,12 +11,12 @@ import {
   Badge,
   Avatar,
   Spinner,
-  Alert,
   Modal,
   ModalFooter,
   Tabs,
   TabItem,
   EmptyState,
+  ProgressBar,
 } from "@/components/common";
 import {
   MapPinIcon,
@@ -28,45 +29,84 @@ import {
   DocumentTextIcon,
   BuildingOfficeIcon,
   GlobeAltIcon,
+  UserPlusIcon,
+  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import {
   formatDate,
   calculatePercentage,
   copyToClipboard,
+  formatFileSize,
 } from "@/utils/helpers";
 import { ROUTES, USER_ROLES } from "@/utils/constants";
+import { VolunteerRegistrationRequest } from "@/types/volunteer.types";
 import toast from "react-hot-toast";
+import { ImageGallery } from "@/components/projects/ImageGallery";
+import { SimilarProjects } from "@/components/projects/SimilarProjects";
+import { ProjectReviews } from "@/components/projects/ProjectReviews";
+import { volunteerAPI } from "@/api/endpoints/volunteer.api";
+import { VolunteerRegistrationModal } from "@/components/projects/VolunteerRegistrationModal";
 
 export const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const projectId = Number(id);
 
   const { data: project, isLoading, error } = useProject(projectId);
   const { mutate: deleteProject, isPending: isDeleting } = useDeleteProject();
+  const registerForProject = useRegisterForProject();
+  const isRegistering = registerForProject.isPending;
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [activeTab, setActiveTab] = useState("details");
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
 
   const isOwner = user?.id === project?.organization.id;
   const isVolunteer = user?.role === USER_ROLES.VOLUNTEER;
-  const canApply = isVolunteer && project?.status === "ACTIVE";
+  const canRegister =
+    isAuthenticated && isVolunteer && project?.status === "ACTIVE" && !isOwner;
 
   const handleDelete = () => {
     deleteProject(projectId);
     setShowDeleteModal(false);
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     const url = `${window.location.origin}${ROUTES.PROJECTS}/${projectId}`;
-    copyToClipboard(url);
-    toast.success("Project link copied to clipboard!");
+
+    // Try to use Web Share API if available
+    if (navigator.share && project) {
+      try {
+        await navigator.share({
+          title: project.title,
+          text:
+            project.shortDescription || project.description.substring(0, 200),
+          url: url,
+        });
+        toast.success("Project shared successfully!");
+      } catch (error: any) {
+        // User cancelled or error occurred, fall back to clipboard
+        if (error.name !== "AbortError") {
+          copyToClipboard(url);
+          toast.success("Project link copied to clipboard!");
+        }
+      }
+    } else {
+      // Fallback to clipboard
+      copyToClipboard(url);
+      toast.success("Project link copied to clipboard!");
+    }
   };
 
-  const handleApply = () => {
-    // Navigate to application page (we'll implement this later)
-    navigate(`${ROUTES.PROJECTS}/${projectId}/apply`);
+  const handleRegister = async (data: VolunteerRegistrationRequest) => {
+    try {
+      await volunteerAPI.registerAsVolunteer(data, projectId);
+      // Close modal on successful registration
+      setShowRegisterModal(false);
+    } catch (error) {
+      // Error is handled by the hook (shows error toast)
+      // Keep modal open so user can fix errors
+    }
   };
 
   if (isLoading) {
@@ -99,14 +139,21 @@ export const ProjectDetailPage: React.FC = () => {
       label: "Details",
       content: (
         <div className="prose max-w-none">
-          <div dangerouslySetInnerHTML={{ __html: project.description }} />
+          <div
+            dangerouslySetInnerHTML={{ __html: project.description }}
+            className="text-gray-700"
+          />
 
           {project.requirements && (
             <div className="mt-8">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Requirements
               </h3>
-              <p className="text-gray-700">{project.requirements}</p>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <p className="text-gray-700 whitespace-pre-wrap">
+                  {project.requirements}
+                </p>
+              </div>
             </div>
           )}
         </div>
@@ -125,7 +172,8 @@ export const ProjectDetailPage: React.FC = () => {
                   {project.organization.name}
                 </h3>
                 <p className="text-gray-600 mt-2">
-                  Organization details and description would go here.
+                  Learn more about this organization and their mission to create
+                  positive social impact.
                 </p>
 
                 <div className="mt-4 space-y-2">
@@ -135,13 +183,21 @@ export const ProjectDetailPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <GlobeAltIcon className="h-4 w-4" />
-                    <a href="#" className="text-primary-600 hover:underline">
-                      www.organization.com
+                    <a
+                      href={`mailto:${project.organization.email}`}
+                      className="text-primary-600 hover:underline"
+                    >
+                      {project.organization.email}
                     </a>
                   </div>
                 </div>
 
-                <Link to={`/organizations/${project.organization.id}`}>
+                <Link
+                  to={ROUTES.USER_PROFILE.replace(
+                    ":id",
+                    project.organization.id.toString()
+                  )}
+                >
                   <Button variant="outline" size="sm" className="mt-4">
                     View Organization Profile
                   </Button>
@@ -158,19 +214,20 @@ export const ProjectDetailPage: React.FC = () => {
       icon: <DocumentTextIcon className="h-4 w-4" />,
       content: (
         <div>
-          {project.documents.length > 0 ? (
+          {project.documents && project.documents.length > 0 ? (
             <div className="space-y-3">
               {project.documents.map((doc) => (
                 <Card key={doc.id} className="p-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <DocumentTextIcon className="h-5 w-5 text-gray-400" />
-                      <div>
-                        <p className="font-medium text-gray-900">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <DocumentTextIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">
                           {doc.originalName}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {doc.fileSize} KB
+                          {formatFileSize(doc.fileSize)} • {doc.downloadCount}{" "}
+                          download{doc.downloadCount !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
@@ -178,8 +235,13 @@ export const ProjectDetailPage: React.FC = () => {
                       href={doc.downloadUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      download
                     >
-                      <Button size="sm" variant="outline">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
+                      >
                         Download
                       </Button>
                     </a>
@@ -204,7 +266,7 @@ export const ProjectDetailPage: React.FC = () => {
       <PageHeader
         title={project.title}
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <Button
               variant="ghost"
               onClick={handleShare}
@@ -215,10 +277,7 @@ export const ProjectDetailPage: React.FC = () => {
             {isOwner && (
               <>
                 <Link
-                  to={`${ROUTES.EDIT_PROJECT.replace(
-                    ":id",
-                    project.id.toString()
-                  )}`}
+                  to={ROUTES.EDIT_PROJECT.replace(":id", project.id.toString())}
                 >
                   <Button
                     variant="outline"
@@ -236,7 +295,14 @@ export const ProjectDetailPage: React.FC = () => {
                 </Button>
               </>
             )}
-            {canApply && <Button onClick={handleApply}>Apply Now</Button>}
+            {canRegister && (
+              <Button
+                onClick={() => setShowRegisterModal(true)}
+                leftIcon={<UserPlusIcon className="h-4 w-4" />}
+              >
+                Register as Volunteer
+              </Button>
+            )}
           </div>
         }
       />
@@ -245,17 +311,20 @@ export const ProjectDetailPage: React.FC = () => {
       <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column - Project Details */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Hero Image */}
-          <div className="aspect-w-16 aspect-h-9">
-            <img
-              src={project.imageUrl || "https://via.placeholder.com/800x450"}
-              alt={project.title}
-              className="w-full h-[400px] object-cover rounded-xl"
-            />
-          </div>
+          {/* Image Gallery */}
+          <ImageGallery
+            images={project.images || []}
+            mainImageUrl={project.imageUrl}
+          />
 
           {/* Tabs */}
           <Tabs items={tabItems} />
+
+          {/* Project Reviews */}
+          <ProjectReviews projectId={projectId} />
+
+          {/* Similar Projects */}
+          <SimilarProjects projectId={projectId} />
         </div>
 
         {/* Right Column - Project Info */}
@@ -270,7 +339,11 @@ export const ProjectDetailPage: React.FC = () => {
                   </h3>
                   <Badge
                     variant={
-                      project.status === "ACTIVE" ? "success" : "secondary"
+                      project.status === "ACTIVE"
+                        ? "success"
+                        : project.status === "COMPLETED"
+                        ? "info"
+                        : "secondary"
                     }
                   >
                     {project.status}
@@ -285,12 +358,12 @@ export const ProjectDetailPage: React.FC = () => {
                       {project.volunteersNeeded}
                     </span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-primary-600 h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${volunteersPercentage}%` }}
-                    />
-                  </div>
+                  <ProgressBar
+                    value={project.volunteersRegistered}
+                    max={project.volunteersNeeded}
+                    variant="primary"
+                    size="md"
+                  />
                   <p className="text-xs text-gray-500 mt-1">
                     {volunteersPercentage}% filled
                   </p>
@@ -305,10 +378,10 @@ export const ProjectDetailPage: React.FC = () => {
               <h3 className="font-semibold text-gray-900 mb-4">
                 Project Information
               </h3>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-start gap-3">
-                  <MapPinIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <MapPinIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">
                       Location
                     </p>
@@ -317,36 +390,38 @@ export const ProjectDetailPage: React.FC = () => {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <CalendarIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">
-                      Duration
+                      Start Date
                     </p>
                     <p className="text-sm text-gray-600">
-                      {formatDate(project.startDate)} -{" "}
+                      {formatDate(project.startDate)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <ClockIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">
+                      End Date
+                    </p>
+                    <p className="text-sm text-gray-600">
                       {formatDate(project.endDate)}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <ClockIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
+                  <UsersIcon className="h-5 w-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900">
-                      Time Commitment
-                    </p>
-                    <p className="text-sm text-gray-600">Flexible</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
-                  <UsersIcon className="h-5 w-5 text-gray-400 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      Team Size
+                      Volunteers Needed
                     </p>
                     <p className="text-sm text-gray-600">
-                      {project.volunteersNeeded} volunteers needed
+                      {project.volunteersNeeded} volunteer
+                      {project.volunteersNeeded !== 1 ? "s" : ""}
                     </p>
                   </div>
                 </div>
@@ -383,16 +458,30 @@ export const ProjectDetailPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Apply Button for Mobile */}
-          {canApply && (
+          {/* Register Button for Mobile */}
+          {canRegister && (
             <div className="lg:hidden">
-              <Button fullWidth size="lg" onClick={handleApply}>
-                Apply Now
+              <Button
+                fullWidth
+                size="lg"
+                onClick={() => setShowRegisterModal(true)}
+                leftIcon={<UserPlusIcon className="h-5 w-5" />}
+              >
+                Register as Volunteer
               </Button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Volunteer Registration Modal */}
+      <VolunteerRegistrationModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+        onSubmit={handleRegister}
+        isLoading={isRegistering}
+        projectTitle={project.title}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal

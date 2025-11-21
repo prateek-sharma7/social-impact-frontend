@@ -23,6 +23,7 @@ import { OrganizationDashboard } from "./pages/dashboard/OrganizationDashboard";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { MyProjectsPage } from "./pages/projects/MyProjectsPage";
 import { CreateProjectPage } from "./pages/projects/CreateProjectPage";
+import { ProjectDetailPage } from "./pages/projects/ProjectDetailPage";
 
 // The route should already be set up from Step 4
 
@@ -51,6 +52,10 @@ export function AppRoutes() {
       <Route element={<MainLayout />}>
         <Route path={ROUTES.HOME} element={<HomePage />} />
         <Route path={ROUTES.PROJECTS} element={<ProjectsPage />} />
+        <Route
+          path={ROUTES.PROJECT_DETAIL}
+          element={<ProjectDetailPage />}
+        />
         <Route path={ROUTES.SEARCH} element={<SearchPage />} />
         <Route path={ROUTES.NOT_FOUND} element={<NotFoundPage />} />
         {/* Public Profile View */}
